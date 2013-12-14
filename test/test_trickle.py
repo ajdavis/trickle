@@ -1,6 +1,5 @@
 import re
 import socket
-from cStringIO import StringIO
 
 from tornado.concurrent import Future
 from tornado.netutil import Resolver
