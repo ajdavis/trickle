@@ -8,8 +8,8 @@ from yieldpoints import WaitAny, Cancel
 __all__ = ['Trickle']
 
 
-_closed = object()
-_success = object()
+closed = object()
+success = object()
 
 
 # TODO: All IOStream methods: readuntil, etc.
@@ -29,10 +29,10 @@ class Trickle(object):
         yield gen.Task(self.stream.connect, *args, **kwargs)
 
     @gen.coroutine
-    def read(self, num_bytes, timeout=None):
+    def read_bytes(self, num_bytes, timeout=None):
         # This code inspired by Roey Berman: https://github.com/bergundy
         stream = self.stream
-        stream.set_close_callback(callback=(yield gen.Callback(_closed)))
+        stream.set_close_callback(callback=(yield gen.Callback(closed)))
         ioloop_timeout = None
         if timeout:
             def on_timeout():
@@ -43,19 +43,19 @@ class Trickle(object):
 
         stream.read_bytes(
             num_bytes,
-            callback=(yield gen.Callback(_success)))
+            callback=(yield gen.Callback(success)))
 
-        key, result = yield WaitAny((_closed, _success))
+        key, result = yield WaitAny((closed, success))
 
         if ioloop_timeout is not None:
             ioloop.IOLoop.current().remove_timeout(ioloop_timeout)
 
         stream.set_close_callback(None)
-        if key is _success:
-            yield Cancel(_closed)
+        if key is success:
+            yield Cancel(closed)
             raise gen.Return(result)
-        elif key is _closed:
-            yield Cancel(_success)
+        elif key is closed:
+            yield Cancel(success)
             if stream.error:
                 raise stream.error
             return
