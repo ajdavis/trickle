@@ -24,7 +24,7 @@ def trickle_method(method_name, timeout):
             def on_timeout():
                 stream.close((socket.timeout, socket.timeout(), None))
 
-            ioloop_timeout = ioloop.IOLoop.current().add_timeout(
+            ioloop_timeout = stream.io_loop.add_timeout(
                 timeout, callback=on_timeout)
 
         method = getattr(stream, method_name)
@@ -34,7 +34,7 @@ def trickle_method(method_name, timeout):
         key, result = yield WaitAny((closed, success))
 
         if ioloop_timeout is not None:
-            ioloop.IOLoop.current().remove_timeout(ioloop_timeout)
+            stream.io_loop.remove_timeout(ioloop_timeout)
 
         stream.set_close_callback(None)
         if key is success:
@@ -84,14 +84,14 @@ class Trickle(object):
             def on_timeout():
                 stream.close((socket.timeout, socket.timeout(), None))
 
-            ioloop_timeout = ioloop.IOLoop.current().add_timeout(
+            ioloop_timeout = stream.io_loop.add_timeout(
                 timeout, callback=on_timeout)
 
         stream.read_until_close(callback=(yield gen.Callback(closed)))
         result = yield Wait(closed)
 
         if ioloop_timeout is not None:
-            ioloop.IOLoop.current().remove_timeout(ioloop_timeout)
+            stream.io_loop.remove_timeout(ioloop_timeout)
 
         if stream.error:
             raise stream.error
