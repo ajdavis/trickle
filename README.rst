@@ -13,9 +13,7 @@ for a coroutine-friendly IOStream interface.
 
 Documentation
 =============
-See the documentation on ReadTheDocs_.
-
-.. _ReadTheDocs:: http://trickle.rtfd.org
+See the documentation on `ReadTheDocs <http://trickle.rtfd.org>`_.
 
 Example
 =======
