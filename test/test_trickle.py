@@ -44,7 +44,7 @@ class TrickleTest(AsyncTestCase):
         server_trickle = Trickle(server_stream)
         data = b'a' * 10
         yield server_trickle.write(data)
-        self.assertEqual(data, (yield client_trickle.read(10)))
+        self.assertEqual(data, (yield client_trickle.read_bytes(10)))
 
     @gen_test
     def test_read_timeout(self):
@@ -59,7 +59,7 @@ class TrickleTest(AsyncTestCase):
         yield client_trickle.connect(sock_addr)
 
         try:
-            yield client_trickle.read(10, timeout=0.01)
+            yield client_trickle.read_bytes(10, timeout=0.01)
         except socket.timeout:
             pass
         else:
@@ -76,15 +76,7 @@ class TrickleTest(AsyncTestCase):
 
         yield trick.connect(sock_addr)
         yield trick.write(b'GET / HTTP/1.1\r\nHost: xkcd.com\r\n\r\n')
-        headers = b''
-
-        # TODO: readuntil.
-        while (
-                not headers.endswith(b'\r\n\r\n')
-                and not trick.closed()):
-            c = yield trick.read(1)
-            headers += c
-
+        headers = yield trick.read_until(b'\r\n\r\n')
         match = re.search(br'Content-Length: (\d+)\r\n', headers)
         content_length = int(match.group(1))
-        yield trick.read(content_length)
+        yield trick.read_bytes(content_length)

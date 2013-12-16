@@ -12,24 +12,9 @@ closed = object()
 success = object()
 
 
-# TODO: All IOStream methods: readuntil, etc.
-class Trickle(object):
-    def __init__(self, *args, **kwargs):
-        if args and isinstance(args[0], IOStream):
-            if len(args) > 1 or kwargs:
-                raise TypeError('Too many arguments to Trickle()')
-
-            self.stream = args[0]
-        else:
-            self.stream = IOStream(*args, **kwargs)
-
+def trickle_method(method_name, timeout):
     @gen.coroutine
-    def connect(self, *args, **kwargs):
-        # TODO: error handling, timeouts.
-        yield gen.Task(self.stream.connect, *args, **kwargs)
-
-    @gen.coroutine
-    def read_bytes(self, num_bytes, timeout=None):
+    def wrapped(self, *args, **kwargs):
         # This code inspired by Roey Berman: https://github.com/bergundy
         stream = self.stream
         stream.set_close_callback(callback=(yield gen.Callback(closed)))
@@ -41,9 +26,9 @@ class Trickle(object):
             ioloop_timeout = ioloop.IOLoop.current().add_timeout(
                 timeout, callback=on_timeout)
 
-        stream.read_bytes(
-            num_bytes,
-            callback=(yield gen.Callback(success)))
+        method = getattr(stream, method_name)
+        kwargs['callback'] = yield gen.Callback(success)
+        method(*args, **kwargs)
 
         key, result = yield WaitAny((closed, success))
 
@@ -62,10 +47,38 @@ class Trickle(object):
         else:
             assert False, 'Unexpected return from WaitAny'
 
-    @gen.coroutine
-    def write(self, data):
-        # TODO: error handling.
-        yield gen.Task(self.stream.write, data)
+    return wrapped
+
+
+class Trickle(object):
+    def __init__(self, *args, **kwargs):
+        if args and isinstance(args[0], IOStream):
+            if len(args) > 1 or kwargs:
+                raise TypeError('Too many arguments to Trickle()')
+
+            self.stream = args[0]
+        else:
+            self.stream = IOStream(*args, **kwargs)
+
+    def connect(self, address, server_hostname=None, timeout=None):
+        return trickle_method('connect', timeout)(self, address, server_hostname=server_hostname)
+
+    def read_until(self, delimiter, timeout=None):
+        return trickle_method('read_until', timeout)(self, delimiter)
+
+    def read_until_regex(self, regex, timeout=None):
+        return trickle_method('read_until_regex', timeout)(self, regex)
+
+    # TODO: note no streaming_callback.
+    def read_bytes(self, num_bytes, timeout=None):
+        return trickle_method('read_bytes', timeout)(self, num_bytes)
+
+    # TODO: note no streaming_callback.
+    def read_until_close(self, timeout=None):
+        return trickle_method('read_until_close', timeout)(self)
+
+    def write(self, data, timeout=None, **kwargs):
+        return trickle_method('write', timeout)(self, data, **kwargs)
 
     def closed(self):
         return self.stream.closed()
