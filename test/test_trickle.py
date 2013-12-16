@@ -32,6 +32,7 @@ class TrickleTCPTest(AsyncTestCase):
         self.server.add_socket(sock)
         self.resolver = Resolver()
 
+    # Utility method, returns two connected Trickles.
     @gen.coroutine
     def connect(self):
         client_trickle = Trickle(
@@ -51,18 +52,54 @@ class TrickleTCPTest(AsyncTestCase):
         raise gen.Return((client_trickle, server_trickle))
 
     @gen_test
-    def test_read_bytes(self):
+    def test_read_until(self):
         client_trickle, server_trickle = yield self.connect()
-        data = b'a' * 10
-        yield server_trickle.write(data)
-        self.assertEqual(data, (yield client_trickle.read_bytes(10)))
+        data_in = b'foo-bar-baz'
+        yield server_trickle.write(data_in)
+        data_out = yield client_trickle.read_until('bar')
+        self.assertEqual('foo-bar', data_out)
 
     @gen_test
-    def test_read_timeout(self):
+    def test_read_until_timeout(self):
         client_trickle, server_trickle = yield self.connect()
-
         try:
-            yield client_trickle.read_bytes(10, timeout=0.01)
+            yield client_trickle.read_until('', timeout=0.01)
+        except socket.timeout:
+            pass
+        else:
+            self.fail('socket.timeout not raised')
+
+    @gen_test
+    def test_read_until_regex(self):
+        client_trickle, server_trickle = yield self.connect()
+        data_in = b'foo-bar-baz'
+        yield server_trickle.write(data_in)
+        data_out = yield client_trickle.read_until_regex('bar')
+        self.assertEqual('foo-bar', data_out)
+
+    @gen_test
+    def test_read_until_regex_timeout(self):
+        client_trickle, server_trickle = yield self.connect()
+        try:
+            yield client_trickle.read_until_regex('', timeout=0.01)
+        except socket.timeout:
+            pass
+        else:
+            self.fail('socket.timeout not raised')
+
+    @gen_test
+    def test_read_bytes(self):
+        client_trickle, server_trickle = yield self.connect()
+        data_in = b'foo-bar-baz'
+        yield server_trickle.write(data_in)
+        data_out = yield client_trickle.read_bytes(7)
+        self.assertEqual('foo-bar', data_out)
+
+    @gen_test
+    def test_read_bytes_timeout(self):
+        client_trickle, server_trickle = yield self.connect()
+        try:
+            yield client_trickle.read_bytes(1, timeout=0.01)
         except socket.timeout:
             pass
         else:
