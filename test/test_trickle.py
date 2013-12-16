@@ -1,6 +1,7 @@
 import re
 import socket
 
+from tornado import gen
 from tornado.concurrent import Future
 from tornado.netutil import Resolver
 from tornado.tcpserver import TCPServer
@@ -31,8 +32,8 @@ class TrickleTCPTest(AsyncTestCase):
         self.server.add_socket(sock)
         self.resolver = Resolver()
 
-    @gen_test
-    def test_basic(self):
+    @gen.coroutine
+    def connect(self):
         client_trickle = Trickle(
             socket.socket(socket.AF_INET),
             io_loop=self.io_loop)
@@ -46,21 +47,19 @@ class TrickleTCPTest(AsyncTestCase):
         # Wait for server to handle connection.
         server_stream = yield self.server.test_stream
         server_trickle = Trickle(server_stream)
+
+        raise gen.Return((client_trickle, server_trickle))
+
+    @gen_test
+    def test_read_bytes(self):
+        client_trickle, server_trickle = yield self.connect()
         data = b'a' * 10
         yield server_trickle.write(data)
         self.assertEqual(data, (yield client_trickle.read_bytes(10)))
 
     @gen_test
     def test_read_timeout(self):
-        client_trickle = Trickle(
-            socket.socket(socket.AF_INET),
-            io_loop=self.io_loop)
-
-        addr_info = yield self.resolver.resolve(
-            'localhost', self.port, socket.AF_INET)
-
-        sock_addr = addr_info[0][1]
-        yield client_trickle.connect(sock_addr)
+        client_trickle, server_trickle = yield self.connect()
 
         try:
             yield client_trickle.read_bytes(10, timeout=0.01)
