@@ -105,6 +105,25 @@ class TrickleTCPTest(AsyncTestCase):
         else:
             self.fail('socket.timeout not raised')
 
+    @gen_test
+    def test_read_until_close(self):
+        client_trickle, server_trickle = yield self.connect()
+        data_in = b'foo-bar-baz'
+        yield server_trickle.write(data_in)
+        server_trickle.stream.close()
+        data_out = yield client_trickle.read_until_close()
+        self.assertEqual('foo-bar-baz', data_out)
+
+    @gen_test
+    def test_read_until_close_timeout(self):
+        client_trickle, server_trickle = yield self.connect()
+        try:
+            yield client_trickle.read_until_close(timeout=0.01)
+        except socket.timeout:
+            pass
+        else:
+            self.fail('socket.timeout not raised')
+
 
 class TrickleTestHandler(RequestHandler):
     def get(self):

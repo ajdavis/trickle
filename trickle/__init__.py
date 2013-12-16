@@ -1,6 +1,7 @@
 import socket
 
 from tornado import gen, ioloop
+from tornado.gen import Wait
 from tornado.iostream import IOStream
 from yieldpoints import WaitAny, Cancel
 
@@ -74,8 +75,28 @@ class Trickle(object):
         return trickle_method('read_bytes', timeout)(self, num_bytes)
 
     # TODO: note no streaming_callback.
+    @gen.coroutine
     def read_until_close(self, timeout=None):
-        return trickle_method('read_until_close', timeout)(self)
+        stream = self.stream
+        ioloop_timeout = None
+
+        if timeout:
+            def on_timeout():
+                stream.close((socket.timeout, socket.timeout(), None))
+
+            ioloop_timeout = ioloop.IOLoop.current().add_timeout(
+                timeout, callback=on_timeout)
+
+        stream.read_until_close(callback=(yield gen.Callback(closed)))
+        result = yield Wait(closed)
+
+        if ioloop_timeout is not None:
+            ioloop.IOLoop.current().remove_timeout(ioloop_timeout)
+
+        if stream.error:
+            raise stream.error
+
+        raise gen.Return(result)
 
     def write(self, data, timeout=None, **kwargs):
         return trickle_method('write', timeout)(self, data, **kwargs)
