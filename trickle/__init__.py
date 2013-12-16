@@ -8,6 +8,7 @@ from yieldpoints import WaitAny, Cancel
 
 __all__ = ['Trickle']
 
+version = '0.1'
 
 closed = object()
 success = object()
@@ -52,6 +53,11 @@ def trickle_method(method_name, timeout):
 
 
 class Trickle(object):
+    """A coroutine-friendly :class:`~tornado.iostream.IOStream` interface.
+
+    Takes same parameters as ``IOStream``, or takes a single ``IOStream``
+    as its only parameter.
+    """
     def __init__(self, *args, **kwargs):
         if args and isinstance(args[0], IOStream):
             if len(args) > 1 or kwargs:
@@ -62,22 +68,50 @@ class Trickle(object):
             self.stream = IOStream(*args, **kwargs)
 
     def connect(self, address, server_hostname=None, timeout=None):
+        """Connects the socket to a remote address without blocking.
+
+        Like ``IOStream`` :meth:`~tornado.iostream.IOStream.connect`,
+        but returns a :class:`~tornado.concurrent.Future` and takes
+        no callback.
+        """
         method = trickle_method('connect', timeout)
         return method(self, address, server_hostname=server_hostname)
 
     def read_until(self, delimiter, timeout=None):
+        """Read up to the given delimiter..
+
+        Like ``IOStream`` :meth:`~tornado.iostream.IOStream.read_until`,
+        but returns a :class:`~tornado.concurrent.Future` and takes no
+        callback.
+        """
         return trickle_method('read_until', timeout)(self, delimiter)
 
     def read_until_regex(self, regex, timeout=None):
+        """Read up to the given regex pattern.
+
+        Like ``IOStream`` :meth:`~tornado.iostream.IOStream.read_until_regex`,
+        but returns a :class:`~tornado.concurrent.Future` and takes no
+        callback.
+        """
         return trickle_method('read_until_regex', timeout)(self, regex)
 
-    # TODO: note no streaming_callback.
     def read_bytes(self, num_bytes, timeout=None):
+        """Read the given number of bytes.
+
+        Like ``IOStream`` :meth:`~tornado.iostream.IOStream.read_bytes`,
+        but returns a :class:`~tornado.concurrent.Future` and takes no
+        callback or streaming_callback.
+        """
         return trickle_method('read_bytes', timeout)(self, num_bytes)
 
-    # TODO: note no streaming_callback.
     @gen.coroutine
     def read_until_close(self, timeout=None):
+        """Read all remaining data from the socket.
+
+        Like ``IOStream`` :meth:`~tornado.iostream.IOStream.read_until_close`,
+        but returns a :class:`~tornado.concurrent.Future` and takes no
+        callback or streaming_callback.
+        """
         stream = self.stream
         ioloop_timeout = None
 
@@ -100,7 +134,16 @@ class Trickle(object):
         raise gen.Return(result)
 
     def write(self, data, timeout=None, **kwargs):
+        """Write the given data to this stream.
+
+        Like ``IOStream`` :meth:`~tornado.iostream.IOStream.write`, but
+        returns a :class:`~tornado.concurrent.Future` and takes no callback.
+
+        yield the returned Future to wait for all data to be written to the
+        stream.
+        """
         return trickle_method('write', timeout)(self, data, **kwargs)
 
     def closed(self):
+        """Returns true if the stream has been closed."""
         return self.stream.closed()

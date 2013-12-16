@@ -11,11 +11,13 @@ Tornado's IOStream API is central to Tornado, but it's designed to be used with
 callbacks, instead of with coroutines and Futures. Trickle is a proof-of-concept
 for a coroutine-friendly IOStream interface.
 
-Documentation
-=============
-See the documentation on ReadTheDocs_.
+Dependencies
+============
+* Tornado_ >= version 3.1.
+* YieldPoints_.
 
-.. _ReadTheDocs:: http://trickle.rtfd.org
+.. _Tornado: http://www.tornadoweb.org/
+.. _YieldPoints: http://yieldpoints.rtfd.org/
 
 Example
 =======
