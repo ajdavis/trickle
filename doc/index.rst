@@ -30,6 +30,11 @@ API
 .. autoclass:: trickle.Trickle
     :members:
 
+Changes
+=======
+
+See the :doc:`changelog`.
+
 Testing
 =======
 
