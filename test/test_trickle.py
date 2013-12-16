@@ -56,8 +56,8 @@ class TrickleTCPTest(AsyncTestCase):
         client_trickle, server_trickle = yield self.connect()
         data_in = b'foo-bar-baz'
         yield server_trickle.write(data_in)
-        data_out = yield client_trickle.read_until('bar')
-        self.assertEqual('foo-bar', data_out)
+        data_out = yield client_trickle.read_until(b'bar')
+        self.assertEqual(b'foo-bar', data_out)
 
     @gen_test
     def test_read_until_timeout(self):
@@ -74,14 +74,14 @@ class TrickleTCPTest(AsyncTestCase):
         client_trickle, server_trickle = yield self.connect()
         data_in = b'foo-bar-baz'
         yield server_trickle.write(data_in)
-        data_out = yield client_trickle.read_until_regex('bar')
-        self.assertEqual('foo-bar', data_out)
+        data_out = yield client_trickle.read_until_regex(b'bar')
+        self.assertEqual(b'foo-bar', data_out)
 
     @gen_test
     def test_read_until_regex_timeout(self):
         client_trickle, server_trickle = yield self.connect()
         try:
-            yield client_trickle.read_until_regex('', timeout=0.01)
+            yield client_trickle.read_until_regex(b'', timeout=0.01)
         except socket.timeout:
             pass
         else:
@@ -93,7 +93,7 @@ class TrickleTCPTest(AsyncTestCase):
         data_in = b'foo-bar-baz'
         yield server_trickle.write(data_in)
         data_out = yield client_trickle.read_bytes(7)
-        self.assertEqual('foo-bar', data_out)
+        self.assertEqual(b'foo-bar', data_out)
 
     @gen_test
     def test_read_bytes_timeout(self):
@@ -112,7 +112,7 @@ class TrickleTCPTest(AsyncTestCase):
         yield server_trickle.write(data_in)
         server_trickle.stream.close()
         data_out = yield client_trickle.read_until_close()
-        self.assertEqual('foo-bar-baz', data_out)
+        self.assertEqual(b'foo-bar-baz', data_out)
 
     @gen_test
     def test_read_until_close_timeout(self):
@@ -159,4 +159,4 @@ class TrickleHTTPTest(AsyncHTTPTestCase):
         match = re.search(br'Content-Length: (\d+)\r\n', headers)
         content_length = int(match.group(1))
         body = yield trick.read_bytes(content_length)
-        self.assertEqual('hello', body)
+        self.assertEqual(b'hello', body)
