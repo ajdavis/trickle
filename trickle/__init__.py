@@ -62,7 +62,8 @@ class Trickle(object):
             self.stream = IOStream(*args, **kwargs)
 
     def connect(self, address, server_hostname=None, timeout=None):
-        return trickle_method('connect', timeout)(self, address, server_hostname=server_hostname)
+        method = trickle_method('connect', timeout)
+        return method(self, address, server_hostname=server_hostname)
 
     def read_until(self, delimiter, timeout=None):
         return trickle_method('read_until', timeout)(self, delimiter)
